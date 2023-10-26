@@ -8,7 +8,9 @@
 *.so
 *.dylib
 __debug_bin*
-
+todo.org
+notes.org
+.envrc
 
 *.test
 
