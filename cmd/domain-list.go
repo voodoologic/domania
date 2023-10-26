@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/voodoologic/domania/cmd/namecheapHandler"
 )
 
 const listHeight = 14
@@ -96,9 +97,17 @@ func (m model) View() string {
 }
 
 func Testing() {
-	items := StartProgram()
-	const defaultWidth = 20
+	client, err := namecheapHandler.NewClient()
+	if err != nil {
 
+	}
+	domains, err := client.GetDomainList()
+	items := []list.Item{}
+	for _, domain := range domains {
+		items = append(items, item(domain))
+	}
+
+	const defaultWidth = 20
 	l := list.New(items, itemDelegate{}, defaultWidth, listHeight)
 	l.Title = "domains at namecheap"
 	l.SetShowStatusBar(false)

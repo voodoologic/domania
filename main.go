@@ -40,5 +40,7 @@ func main() {
 	// if err := digCmd.Execute(); err != nil {
 	// 	panic(err)
 	// }
+	x := dig.StartProgram()
+	x = nil
 	dig.Testing()
 }

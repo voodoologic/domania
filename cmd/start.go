@@ -83,10 +83,4 @@ func StartProgram() []list.Item {
 		fmt.Println("could not start program", err)
 		os.Exit(1)
 	}
-	items := []list.Item{
-		item("dougheadley.com"),
-		item("classykathy.com"),
-		item("nothingburger.recipies"),
-	}
-	return items
 }
