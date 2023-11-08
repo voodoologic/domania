@@ -96,20 +96,11 @@ func (m model) View() string {
 	return "\n" + m.list.View()
 }
 
-func Testing() {
-	client, err := namecheapHandler.NewClient()
-	if err != nil {
-
-	}
-	domains, err := client.GetDomainList()
-	items := []list.Item{}
-	for _, domain := range domains {
-		items = append(items, item(domain))
-	}
-
+func ListDomains(domains []list.Item) string {
 	const defaultWidth = 20
-	l := list.New(items, itemDelegate{}, defaultWidth, listHeight)
-	l.Title = "domains at namecheap"
+
+	l := list.New(domains, itemDelegate{}, defaultWidth, listHeight)
+	l.Title = "please select which domain to look up"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.Styles.Title = titleStyle
@@ -122,4 +113,18 @@ func Testing() {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
+	return m.choice
+}
+
+func GetDomains() []list.Item {
+	client, err := namecheapHandler.NewClient()
+	if err != nil {
+
+	}
+	domains, err := client.GetDomainList()
+	items := []list.Item{}
+	for _, domain := range domains {
+		items = append(items, item(domain))
+	}
+	return items
 }

@@ -73,7 +73,7 @@ type DNSEntity struct {
 
 // digDomain function to run dig command on a domain and returns DigResult struct
 func DigDomain(domain string) (*[]DNSLookupResult, error) {
-	cmd := fmt.Sprintf("dig %s | jc --dig", domain)
+	cmd := fmt.Sprintf("dig +answer %s | jc --dig", domain)
 	var result []DNSLookupResult
 	output, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
@@ -82,6 +82,5 @@ func DigDomain(domain string) (*[]DNSLookupResult, error) {
 	if err := json.Unmarshal([]byte(output), &result); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal")
 	}
-	fmt.Printf("the result is: %v", output)
 	return &result, nil
 }

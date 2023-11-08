@@ -3,7 +3,6 @@ package dig
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -11,27 +10,33 @@ import (
 )
 
 type responseMsg struct {
+	domains  []list.Item
 	quitting bool
 }
 
-type responseChannel struct{}
+type responseChannel struct {
+	domains []list.Item
+}
 
 type startModel struct {
-	sub       chan struct{}
+	sub       chan responseChannel
 	responses int
 	spinner   spinner.Model
 	quitting  bool
+	domains   []list.Item
 }
 
-func callNamecheap() tea.Msg {
+func callNamecheap(sub chan responseChannel) tea.Cmd {
 	//this is where the activity is called
-	time.Sleep(time.Second * 5)
-	return responseMsg{
-		quitting: true,
+	return func() tea.Msg {
+		for {
+			domains := GetDomains()
+			sub <- responseChannel{domains: domains}
+		}
 	}
 }
 
-func waitForActivity(sub chan struct{}) tea.Cmd {
+func waitForActivity(sub chan responseChannel) tea.Cmd {
 	return func() tea.Msg {
 		return responseChannel(<-sub)
 	}
@@ -40,7 +45,7 @@ func waitForActivity(sub chan struct{}) tea.Cmd {
 func (m startModel) Init() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
-		callNamecheap,
+		callNamecheap(m.sub),
 		waitForActivity(m.sub),
 	)
 }
@@ -48,7 +53,7 @@ func (m startModel) Init() tea.Cmd {
 func (m startModel) View() string {
 	s := fmt.Sprintf("Fetching your domains from namecheap %s", m.spinner.View())
 	if m.quitting {
-		s += "\n"
+		// s += "\n"
 	}
 	return s
 }
@@ -58,9 +63,10 @@ func (m startModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		m.quitting = true
 		return m, tea.Quit
-	case responseMsg:
-		response := msg.(responseMsg)
-		if response.quitting {
+	case responseChannel:
+		response := msg.(responseChannel)
+		if response.domains != nil {
+			m.domains = response.domains
 			return m, tea.Quit
 		} else {
 			return m, waitForActivity(m.sub)
@@ -75,12 +81,16 @@ func (m startModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func StartProgram() []list.Item {
-	p := tea.NewProgram(startModel{
-		sub:     make(chan struct{}),
+	// start spinner and get domains
+	model := startModel{
+		sub:     make(chan responseChannel),
 		spinner: spinner.New(),
-	})
-	if _, err := p.Run(); err != nil {
+	}
+	p := tea.NewProgram(model)
+	returnModel, err := p.Run()
+	if err != nil {
 		fmt.Println("could not start program", err)
 		os.Exit(1)
 	}
+	return returnModel.(startModel).domains
 }
