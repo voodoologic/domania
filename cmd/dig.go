@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
+	"os"
 	"os/exec"
 )
 
@@ -72,9 +74,18 @@ type DNSEntity struct {
 }
 
 // digDomain function to run dig command on a domain and returns DigResult struct
-func DigDomain(domain string) (*[]DNSLookupResult, error) {
-	cmd := fmt.Sprintf("dig +answer %s | jc --dig", domain)
+func DigDomain(domain string, recordType string) (*[]DNSLookupResult, error) {
+	ips, err := net.LookupIP("google.com")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not get IPs: %v\n", err)
+		os.Exit(1)
+	}
+	for _, ip := range ips {
+		fmt.Printf("google.com. IN A %s\n", ip.String())
+	}
+	cmd := fmt.Sprintf("dig +answer %s %s | jc --dig", domain, recordType)
 	var result []DNSLookupResult
+	fmt.Println(cmd)
 	output, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
 		return nil, err

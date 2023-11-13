@@ -109,19 +109,21 @@ func ListDomains(domains []list.Item) string {
 
 	m := model{list: l}
 
-	if _, err := tea.NewProgram(m).Run(); err != nil {
+	newModel, err := tea.NewProgram(m).Run()
+	if err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
-	return m.choice
+	return newModel.(model).choice
 }
 
 func GetDomains() []list.Item {
-	client, err := namecheapHandler.NewClient()
-	if err != nil {
+	domains, err := namecheapHandler.GetDomainList()
 
+	if err != nil {
+		panic(err)
 	}
-	domains, err := client.GetDomainList()
+
 	items := []list.Item{}
 	for _, domain := range domains {
 		items = append(items, item(domain))

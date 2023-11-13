@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	dig "github.com/voodoologic/domania/cmd"
 )
 
@@ -37,9 +35,12 @@ func main() {
 	// if err := digCmd.Execute(); err != nil {
 	// 	panic(err)
 	// }
-	DomainList := dig.StartProgram()
-	selectedDomain := dig.ListDomains(DomainList)
-	fmt.Println(selectedDomain)
+	// DomainList := dig.StartProgram()
+	// selectedDomain := dig.ListDomains(DomainList)
+	// fmt.Println(selectedDomain)
+	// if *selectedDomain == "" {
+	// 	panic("blank")
+	// }
 	// dig.DomainDetails(selectedDomain)
 	dig.DomainDetails("dougheadley.com")
 }
