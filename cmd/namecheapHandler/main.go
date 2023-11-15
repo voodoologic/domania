@@ -73,6 +73,7 @@ func getHosts(hostname string, rows []table.Row) ([]table.Row, error) {
 			myType = *host.Type
 		}
 		r := table.Row{
+			"?",
 			myType,
 			myhost,
 			*host.Address,
@@ -91,9 +92,10 @@ func getNameServers(hostname string, rows []table.Row) ([]table.Row, error) {
 
 	for _, derp := range *getInfoResponse.DomainDNSGetListResult.DnsDetails.Nameservers {
 		r := table.Row{
+			"?",
 			"NS",
 			hostname + ".",
-			derp,
+			derp + ".",
 		}
 		rows = append(rows, r)
 

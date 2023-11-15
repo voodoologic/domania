@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
-	"os"
 	"os/exec"
+	"regexp"
+
+	"github.com/charmbracelet/bubbles/table"
 )
 
 func main() {
@@ -73,19 +74,41 @@ type DNSEntity struct {
 	Data  string `json:"data,omitempty"`
 }
 
+func InitDomain(domain string) ([]table.Row, error) {
+	lookupResult := Report{}
+	for _, recordType := range []string{"A", "MX", "TXT", "CNAME", "NS"} {
+		DNSlookupReports, _ := DigDomain(domain, recordType)
+		for _, digReport := range *DNSlookupReports {
+			lookupResult.digResults = append(lookupResult.digResults, digReport)
+		}
+	}
+	rows := []table.Row{}
+	for _, result := range lookupResult.digResults {
+		for _, answer := range result.Answer {
+			if answer.Type == "MX" {
+				re := regexp.MustCompile(`\d+ `)
+				cleanMXData := re.ReplaceAllString(answer.Data, "")
+				rows = append(rows, table.Row{"?", answer.Type, answer.Name, cleanMXData})
+			} else {
+				rows = append(rows, table.Row{"?", answer.Type, answer.Name, answer.Data})
+			}
+		}
+	}
+	return rows, nil
+}
+
 // digDomain function to run dig command on a domain and returns DigResult struct
-func DigDomain(domain string, recordType string) (*[]DNSLookupResult, error) {
-	ips, err := net.LookupIP("google.com")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not get IPs: %v\n", err)
-		os.Exit(1)
-	}
-	for _, ip := range ips {
-		fmt.Printf("google.com. IN A %s\n", ip.String())
-	}
+func DigDomain(domain, recordType string) (*[]DNSLookupResult, error) {
+	// ips, err := net.LookupIP("google.com")
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "Could not get IPs: %v\n", err)
+	// 	os.Exit(1)
+	// }
+	// for _, ip := range ips {
+	// 	fmt.Printf("google.com. IN A %s\n", ip.String())
+	// }
 	cmd := fmt.Sprintf("dig +answer %s %s | jc --dig", domain, recordType)
 	var result []DNSLookupResult
-	fmt.Println(cmd)
 	output, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
 		return nil, err

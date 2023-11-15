@@ -36,14 +36,18 @@ func (m tableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "enter":
-			return m, tea.Batch(
-				tea.Printf("Let's go to %s!", m.digTable.SelectedRow()[1]),
-			)
+			return m, nil
 		}
+	}
+	if len(m.digTable.Rows()) != len(m.nameCheap.Rows()) {
+		rows, cheap := consolidate(m)
+		m.digTable.SetRows(rows)
+		m.nameCheap.SetRows(cheap)
 	}
 	m.digTable, cmd = m.digTable.Update(msg)
 	return m, cmd
 }
+
 func (m tableModel) View() string {
 	body := strings.Builder{}
 	body.WriteString("wut up?\n")
@@ -56,8 +60,44 @@ func (m tableModel) View() string {
 	return baseStyle.Render(tables) + "\n"
 }
 
+func consolidate(myTableModel tableModel) ([]table.Row, []table.Row) {
+	digTableModel := myTableModel.digTable.Rows()
+	cheapsTableModel := myTableModel.nameCheap.Rows()
+	for _, row := range digTableModel {
+		cheap := returnMatchForRow(row, cheapsTableModel)
+		if cheap != nil {
+			row[0] = "Y"
+			cheap[0] = "Y"
+		} else {
+			row[0] = "N"
+		}
+	}
+	return digTableModel, cheapsTableModel
+}
+
+func returnMatchForRow(row table.Row, cheaps []table.Row) table.Row {
+	for _, cheap := range cheaps {
+		if match(row, cheap) {
+			return cheap
+		}
+	}
+
+	return nil
+}
+
 type Report struct {
 	digResults []DNSLookupResult
+}
+
+func match(row, cheap table.Row) bool {
+	for i := 1; len(row) > i; i++ {
+		if row[i] == cheap[i] {
+			continue
+		} else {
+			return false
+		}
+	}
+	return true
 }
 
 func DomainDetails(host string) {
@@ -65,24 +105,16 @@ func DomainDetails(host string) {
 	// I want to call namecheap and show the same information in a table
 
 	// namecheap.DomainsDNSGetHostsCommandResponse()
-	lookupResult := Report{}
-	for _, recordType := range []string{"A", "MX", "TXT", "CNAME", "NS"} {
-		DNSlookupReports, _ := DigDomain(host, recordType)
-		for _, digReport := range *DNSlookupReports {
-			lookupResult.digResults = append(lookupResult.digResults, digReport)
-		}
+	rows, err := InitDomain(host)
+	if err != nil {
+		panic(err)
 	}
+
 	columns := []table.Column{
-		{Title: "Type", Width: 8},
+		{Title: "M", Width: 1},
+		{Title: "Type", Width: 5},
 		{Title: "Name", Width: 25},
 		{Title: "Data", Width: 33},
-	}
-	rows := []table.Row{}
-	for _, result := range lookupResult.digResults {
-		fmt.Printf("question: %s\n", result.Question.Type)
-		for _, answer := range result.Answer {
-			rows = append(rows, table.Row{answer.Type, answer.Name, answer.Data})
-		}
 	}
 
 	t := table.New(
@@ -91,6 +123,7 @@ func DomainDetails(host string) {
 		table.WithFocused(true),
 		table.WithHeight(len(rows)),
 	)
+
 	s := table.DefaultStyles()
 	s.Header = s.Header.
 		BorderStyle(lipgloss.NormalBorder()).
@@ -109,7 +142,7 @@ func DomainDetails(host string) {
 	t2 := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows2),
-		table.WithFocused(true),
+		table.WithFocused(false),
 		table.WithHeight(len(rows2)),
 	)
 	s2 := table.DefaultStyles()
@@ -124,7 +157,7 @@ func DomainDetails(host string) {
 		Background(lipgloss.Color("57")).
 		Bold(false)
 	t2.SetStyles(s2)
-	m := tableModel{t2, t}
+	m := tableModel{t, t2}
 
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("error", err)
