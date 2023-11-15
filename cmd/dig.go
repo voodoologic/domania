@@ -6,6 +6,7 @@ import (
 	"log"
 	"os/exec"
 	"regexp"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
 )
@@ -75,30 +76,19 @@ type DNSEntity struct {
 }
 
 func InitDomain(domain string) ([]table.Row, error) {
-	lookupResult := Report{}
-	for _, recordType := range []string{"A", "MX", "TXT", "CNAME", "NS"} {
-		DNSlookupReports, _ := DigDomain(domain, recordType)
-		for _, digReport := range *DNSlookupReports {
-			lookupResult.digResults = append(lookupResult.digResults, digReport)
-		}
-	}
 	rows := []table.Row{}
-	for _, result := range lookupResult.digResults {
-		for _, answer := range result.Answer {
-			if answer.Type == "MX" {
-				re := regexp.MustCompile(`\d+ `)
-				cleanMXData := re.ReplaceAllString(answer.Data, "")
-				rows = append(rows, table.Row{"?", answer.Type, answer.Name, cleanMXData})
-			} else {
-				rows = append(rows, table.Row{"?", answer.Type, answer.Name, answer.Data})
-			}
+	for _, recordType := range []string{"A", "MX", "TXT", "CNAME", "NS", "SOA"} {
+		digRows, err := DigDomain(domain, recordType)
+		if err != nil {
+
 		}
+		rows = append(rows, digRows...)
 	}
 	return rows, nil
 }
 
 // digDomain function to run dig command on a domain and returns DigResult struct
-func DigDomain(domain, recordType string) (*[]DNSLookupResult, error) {
+func DigDomain(domain string, recordType string) ([]table.Row, error) {
 	// ips, err := net.LookupIP("google.com")
 	// if err != nil {
 	// 	fmt.Fprintf(os.Stderr, "Could not get IPs: %v\n", err)
@@ -116,5 +106,38 @@ func DigDomain(domain, recordType string) (*[]DNSLookupResult, error) {
 	if err := json.Unmarshal([]byte(output), &result); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal")
 	}
-	return &result, nil
+	results := processResults(result)
+	return results, nil
+}
+
+func processResults(results []DNSLookupResult) []table.Row {
+	rows := []table.Row{}
+	for _, digReport := range results {
+		for _, answer := range digReport.Answer {
+			switch answer.Type {
+			case "MX":
+				re := regexp.MustCompile(`\d+ `)
+				cleanMXData := re.ReplaceAllString(answer.Data, "")
+				rows = append(rows, table.Row{"?", answer.Type, answer.Name, cleanMXData})
+			case "A":
+				//noop
+			case "SOA":
+				data := strings.Fields(answer.Data)
+				re := regexp.MustCompile(`^\D*$`) // matches only if string contains no digits
+
+				var filteredEntries []string
+				for _, entry := range data {
+					if re.MatchString(entry) {
+						filteredEntries = append(filteredEntries, entry)
+					}
+				}
+				for _, datum := range filteredEntries {
+					rows = append(rows, table.Row{"?", "A", answer.Name, datum})
+				}
+			default:
+				rows = append(rows, table.Row{"?", answer.Type, answer.Name, answer.Data})
+			}
+		}
+	}
+	return rows
 }

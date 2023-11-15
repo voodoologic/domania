@@ -41,8 +41,11 @@ func (m tableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	if len(m.digTable.Rows()) != len(m.nameCheap.Rows()) {
 		rows, cheap := consolidate(m)
+		rows, cheap = lookupOutliers(rows, cheap)
 		m.digTable.SetRows(rows)
+		m.digTable.SetHeight(len(rows))
 		m.nameCheap.SetRows(cheap)
+		m.nameCheap.SetHeight(len(cheap))
 	}
 	m.digTable, cmd = m.digTable.Update(msg)
 	return m, cmd
@@ -100,10 +103,23 @@ func match(row, cheap table.Row) bool {
 	return true
 }
 
+func lookupOutliers(rows, cheaps []table.Row) ([]table.Row, []table.Row) {
+
+	for _, cheap := range cheaps {
+		if cheap[0] == "?" {
+			//extract domain
+			newRows, err := DigDomain(cheap[2], cheap[1])
+			if err != nil {
+			}
+			rows = append(rows, newRows...)
+		}
+	}
+	return rows, cheaps
+}
+
 func DomainDetails(host string) {
 	// I want to call dig on this and display the information in a table
 	// I want to call namecheap and show the same information in a table
-
 	// namecheap.DomainsDNSGetHostsCommandResponse()
 	rows, err := InitDomain(host)
 	if err != nil {
