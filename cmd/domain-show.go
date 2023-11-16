@@ -3,7 +3,6 @@ package dig
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
@@ -43,6 +42,9 @@ func (m tableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		rows, cheap := consolidate(m)
 		rows, cheap = lookupOutliers(rows, cheap)
 		m.digTable.SetRows(rows)
+		m.nameCheap.SetRows(cheap)
+		rows, cheap = consolidate(m)
+		m.digTable.SetRows(rows)
 		m.digTable.SetHeight(len(rows))
 		m.nameCheap.SetRows(cheap)
 		m.nameCheap.SetHeight(len(cheap))
@@ -52,8 +54,6 @@ func (m tableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m tableModel) View() string {
-	body := strings.Builder{}
-	body.WriteString("wut up?\n")
 	pad := lipgloss.NewStyle().Padding(1)
 	tables := lipgloss.JoinHorizontal(
 		lipgloss.Top,
