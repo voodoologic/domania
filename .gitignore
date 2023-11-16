@@ -23,3 +23,7 @@ notes.org
 # Go workspace file
 go.work
 debug_launcher.el
+.DS_Store
+.tool-versions
+todo.org_archive
+
